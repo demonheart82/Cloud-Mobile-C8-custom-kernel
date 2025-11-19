@@ -1,0 +1,54 @@
+name: Kernel Build for Cloud Mobile C8
+
+on:
+  push:
+    branches:
+      - main  # or your default branch
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Upload Boot Image (if not already on repo)
+      # Skip if the boot image is already in the repo
+      # or add this step to upload your boot image manually
+
+    - name: Download boot image
+      run: |
+        wget -O boot.img ${{ secrets.BOOT_IMAGE_URL }}
+
+    - name: Extract kernel from boot image
+      run: |
+        sudo apt-get install -y unzip
+        git clone https://github.com/osama-x/magiskboot.git
+        ./magiskboot unpack boot.img
+        # the kernel is in unpacked folder
+        # Adjust commands based on your extraction method
+
+    - name: Prepare kernel file
+      run: |
+        cp unpacked/zImage ./kernel.img  # or your extracted kernel filename
+
+    - name: Inject kernel into NetHunter ZIP
+      run: |
+        # Download base ZIP
+        wget -O nethunter.zip ${{ secrets.NETHUNTER_ZIP_URL }}
+        mkdir -p nethunter_extracted
+        unzip nethunter.zip -d nethunter_extracted
+
+        # Replace kernel
+        cp kernel.img nethunter_extracted/kalifs/kali/kernel/Image.gz
+
+        # Repack ZIP
+        cd nethunter_extracted
+        zip -r ../custom_nh.zip *
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: custom_nh_zip
+        path: custom_nh.zip
